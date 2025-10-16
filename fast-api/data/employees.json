@@ -1,0 +1,52 @@
+{
+  "employees": [
+    {
+      "employee_id": 101,
+      "name": "John Doe",
+      "manager": "Jane Smith",
+      "department": "Engineering",
+      "email": "john.doe@company.com",
+      "position": "Senior Software Developer"
+    },
+    {
+      "employee_id": 102,
+      "name": "Jane Smith",
+      "manager": "Bob Wilson",
+      "department": "Engineering",
+      "email": "jane.smith@company.com",
+      "position": "Engineering Manager"
+    },
+    {
+      "employee_id": 103,
+      "name": "Bob Wilson",
+      "manager": "Sarah Johnson",
+      "department": "Engineering",
+      "email": "bob.wilson@company.com",
+      "position": "VP of Engineering"
+    },
+    {
+      "employee_id": 104,
+      "name": "Alice Brown",
+      "manager": "Jane Smith",
+      "department": "Engineering",
+      "email": "alice.brown@company.com",
+      "position": "Software Developer"
+    },
+    {
+      "employee_id": 105,
+      "name": "Mike Davis",
+      "manager": "Carol White",
+      "department": "Marketing",
+      "email": "mike.davis@company.com",
+      "position": "Marketing Specialist"
+    },
+    {
+      "employee_id": 106,
+      "name": "Carol White",
+      "manager": "Sarah Johnson",
+      "department": "Marketing",
+      "email": "carol.white@company.com",
+      "position": "Marketing Director"
+    }
+  ]
+}
