@@ -1,10 +1,12 @@
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, HTTPException, Query
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import os
 import json
 from typing import List, Dict, Optional
+from playwright.async_api import async_playwright
+import asyncio
 
 # Create FastAPI instance
 app = FastAPI(title="Employee Management API", version="1.0.0")
@@ -33,6 +35,29 @@ def get_employee_by_id(employee_id: int) -> Optional[Dict]:
             return employee
     return None
 
+async def generate_pdf_from_html(html_content: str, employee_name: str = "employee") -> bytes:
+    """Generate PDF from HTML content using Playwright"""
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        await page.set_content(html_content)
+        
+        # Generate PDF with professional settings
+        pdf_bytes = await page.pdf(
+            format='A4',
+            margin={
+                'top': '20mm',
+                'bottom': '20mm', 
+                'left': '20mm',
+                'right': '20mm'
+            },
+            print_background=True,  # Include background colors/images
+            prefer_css_page_size=True
+        )
+        
+        await browser.close()
+        return pdf_bytes
+
 @app.get("/")
 def read_root():
     """
@@ -43,10 +68,15 @@ def read_root():
         "features": [
             "Employee directory at /employees",
             "Individual employee pages at /employee/{id}",
+            "PDF generation with ?format=pdf parameter",
             "JSON API endpoints at /api/employee/{id}",
             "Interactive docs at /docs"
         ],
-        "sample_employees": [101, 102, 103, 104, 105, 106]
+        "sample_employees": [101, 102, 103, 104, 105, 106],
+        "pdf_examples": [
+            "/employee/101?format=pdf",
+            "/api/employee/102?format=pdf"
+        ]
     }
 
 # HTML ENDPOINTS
@@ -61,22 +91,54 @@ async def employees_page(request: Request):
         "employees": employees
     })
 
-@app.get("/employee/{employee_id}", response_class=HTMLResponse)
-async def employee_page(request: Request, employee_id: int):
+@app.get("/employee/{employee_id}")
+async def employee_page(request: Request, employee_id: int, format: str = Query(default="html", pattern="^(html|pdf)$")):
     """
-    HTML page showing individual employee details
+    Employee page - returns HTML by default, PDF if format=pdf
     """
     employee = get_employee_by_id(employee_id)
     if not employee:
+        if format == "pdf":
+            raise HTTPException(status_code=404, detail="Employee not found")
         return templates.TemplateResponse("employee_not_found.html.jinja", {
             "request": request,
             "employee_id": employee_id
         }, status_code=404)
     
-    return templates.TemplateResponse("employee.html.jinja", {
+    # Generate HTML content
+    html_response = templates.TemplateResponse("employee.html.jinja", {
         "request": request,
         "employee": employee
     })
+    
+    if format == "pdf":
+        # Get the HTML content
+        html_content = html_response.body.decode('utf-8') if hasattr(html_response, 'body') else str(html_response)
+        
+        # If we can't get the body directly, render the template manually
+        if not hasattr(html_response, 'body'):
+            html_content = templates.get_template("employee.html.jinja").render(
+                request=request, 
+                employee=employee
+            )
+        
+        # Generate PDF
+        pdf_bytes = await generate_pdf_from_html(html_content, employee["name"])
+        
+        # Create filename
+        safe_name = employee["name"].lower().replace(" ", "_").replace(".", "")
+        filename = f"employee_{employee_id}_{safe_name}.pdf"
+        
+        # Return PDF response
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+    
+    return html_response
 
 # JSON API ENDPOINTS
 @app.get("/api/employees")
@@ -88,13 +150,48 @@ def api_get_all_employees():
     return {"employees": employees, "count": len(employees)}
 
 @app.get("/api/employee/{employee_id}")
-def api_get_employee(employee_id: int):
+async def api_get_employee(employee_id: int, format: str = Query(default="json", pattern="^(json|pdf)$")):
     """
-    JSON API endpoint to get a specific employee
+    API endpoint to get employee data - JSON by default, PDF if format=pdf
     """
     employee = get_employee_by_id(employee_id)
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
+    
+    if format == "pdf":
+        # Create a simple request object for template rendering
+        from fastapi import Request
+        from fastapi.templating import Jinja2Templates
+        
+        # Create a mock request for template rendering
+        class MockRequest:
+            def __init__(self):
+                self.url = f"http://localhost/api/employee/{employee_id}"
+                self.base_url = "http://localhost"
+        
+        mock_request = MockRequest()
+        
+        # Render HTML template
+        html_content = templates.get_template("employee.html.jinja").render(
+            request=mock_request,
+            employee=employee
+        )
+        
+        # Generate PDF
+        pdf_bytes = await generate_pdf_from_html(html_content, employee["name"])
+        
+        # Create filename
+        safe_name = employee["name"].lower().replace(" ", "_").replace(".", "")
+        filename = f"employee_{employee_id}_{safe_name}.pdf"
+        
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+    
     return employee
 
 @app.get("/health")
