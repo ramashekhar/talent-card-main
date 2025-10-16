@@ -27,11 +27,13 @@ A simple FastAPI application with basic endpoints.
 
 ## Deployment Instructions
 
-Each project folder contains its own:
-- `requirements.txt` - Dependencies
-- `Procfile` - Heroku process configuration
+**Root Level Files (for Heroku detection):**
+- `requirements.txt` - Dependencies for the active project
+- `Procfile` - Heroku process configuration pointing to active project
 - `runtime.txt` - Python version
-- `README.md` - Project-specific instructions
+
+**Project Folders:**
+Each project folder also contains its own deployment files for reference.
 
 ## Local Development
 
@@ -47,8 +49,10 @@ python main.py  # or the appropriate entry point
 1. Push this repo to GitHub
 2. Create a new Heroku app
 3. Connect the app to this GitHub repository
-4. **Important**: Set the app root directory to the specific project folder (e.g., `fast-api`)
-5. Deploy from main branch
+4. Deploy from main branch
+5. The root-level `Procfile` will automatically run the FastAPI app from the `fast-api/` folder
+
+**For future projects:** Update the root-level `Procfile`, `requirements.txt`, and `runtime.txt` to point to your desired project folder.
 
 ## Structure
 ```
