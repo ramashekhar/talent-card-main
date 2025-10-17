@@ -46,6 +46,32 @@ C:\python\heroku\                           ← Git repository root (heroku.git)
 
 ## 📝 Development Session History
 
+### **Session 4: October 17, 2025 - Layout Fix & Repository Cleanup**
+
+#### **🎨 HTML/CSS Layout Margin Fix**
+- **Problem**: Talent card displayed with unwanted white margins at top, content appeared vertically centered instead of top-aligned
+- **Root Cause**: Browser default margins on `html` and `body` elements despite global `* { margin: 0; }` reset
+- **Solution**: Added explicit `html, body { margin: 0; padding: 0; }` CSS rule before body-specific styling
+- **Testing Results**: 
+  - ✅ Chrome: Layout correctly aligns to top-left corner
+  - ⚠️ Comet/Perplexity browser: Still shows centered layout (custom webkit engine ignores CSS margins)
+- **Impact**: Fixes layout for Chrome and Power Automate PDF converter (primary targets)
+
+#### **🧹 Repository Tracking Cleanup**
+- **Problem**: `compare/` and `output/` folders were tracked in git despite being in `.gitignore`
+- **Root Cause**: Folders were added to tracking before `.gitignore` was configured
+- **Solution**: Executed `git rm -r --cached compare/ output/` to remove from tracking while keeping local files
+- **Files Removed**: 7 HTML test/output files (1,918 lines removed from repository)
+- **Impact**: Cleaner repository, test/output files remain local for development only
+
+#### **📝 Documentation Organization**
+- **Task**: Reorganized DEVELOPMENT_LOG.md to reverse chronological order (most recent first)
+- **Changes**: Moved Session 3 to top, condensed detailed issue analysis into session summaries
+- **Rationale**: Development log serves as timeline, not deep-dive issue documentation
+- **Impact**: Easier to find recent changes, clearer separation from README.md project documentation
+
+---
+
 ### **Session 3: October 17, 2025 - Power Automate HTML-to-PDF Compatibility**
 
 #### **🔍 File Size Issue Investigation**
