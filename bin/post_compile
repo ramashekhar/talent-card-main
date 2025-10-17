@@ -1,13 +1,2 @@
 #!/bin/bash
-echo "Setting up Playwright environment..."
-export PLAYWRIGHT_BROWSERS_PATH="/app/.playwright"
-
-echo "Installing Playwright system dependencies..."
-python -m playwright install-deps chromium || echo "install-deps failed, continuing..."
-
-echo "Installing Playwright browsers..."
-python -m playwright install chromium || echo "browser install failed, continuing..."
-
-echo "Playwright setup complete."
-echo "Browsers path: $PLAYWRIGHT_BROWSERS_PATH"
-ls -la /app/.playwright/ || echo "Browsers directory not found"
+echo "ReportLab PDF generation - no additional setup required"

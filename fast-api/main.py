@@ -5,19 +5,12 @@ from fastapi.templating import Jinja2Templates
 import os
 import json
 from typing import List, Dict, Optional
-from playwright.async_api import async_playwright
-import asyncio
-
-# Set Playwright environment variables for Heroku
-if os.getenv("DYNO"):  # Running on Heroku
-    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/app/.playwright"
-
-# Try to import WeasyPrint for fallback
-try:
-    from weasyprint import HTML, CSS
-    WEASYPRINT_AVAILABLE = True
-except ImportError:
-    WEASYPRINT_AVAILABLE = False
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from io import BytesIO
 
 # Create FastAPI instance
 app = FastAPI(title="Employee Management API", version="1.0.0")
@@ -46,94 +39,101 @@ def get_employee_by_id(employee_id: int) -> Optional[Dict]:
             return employee
     return None
 
-async def generate_pdf_with_weasyprint(html_content: str) -> bytes:
-    """Generate PDF using WeasyPrint as fallback"""
+async def generate_pdf_from_employee_data(employee: Dict) -> bytes:
+    """Generate PDF from employee data using ReportLab"""
     try:
-        if not WEASYPRINT_AVAILABLE:
-            raise Exception("WeasyPrint not available")
+        # Create a BytesIO buffer to hold PDF data
+        buffer = BytesIO()
         
-        # Generate PDF from HTML string
-        pdf_bytes = HTML(string=html_content).write_pdf()
+        # Create PDF document
+        doc = SimpleDocTemplate(buffer, pagesize=A4, 
+                              rightMargin=72, leftMargin=72,
+                              topMargin=72, bottomMargin=18)
+        
+        # Get styles
+        styles = getSampleStyleSheet()
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            spaceAfter=30,
+            textColor=colors.HexColor('#007bff'),
+            alignment=1  # Center alignment
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=14,
+            spaceBefore=12,
+            spaceAfter=6,
+            textColor=colors.HexColor('#495057')
+        )
+        
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontSize=12,
+            spaceBefore=6,
+            spaceAfter=6
+        )
+        
+        # Build PDF content
+        story = []
+        
+        # Title
+        story.append(Paragraph("Employee Profile", title_style))
+        story.append(Spacer(1, 12))
+        
+        # Employee name
+        story.append(Paragraph(f"<b>{employee['name']}</b>", heading_style))
+        story.append(Spacer(1, 12))
+        
+        # Employee details table
+        data = [
+            ['Employee ID:', str(employee['employee_id'])],
+            ['Position:', employee['position']],
+            ['Department:', employee['department']],
+            ['Manager:', employee['manager']],
+            ['Email:', employee['email']]
+        ]
+        
+        table = Table(data, colWidths=[2*inch, 4*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8f9fa')),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#495057')),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('TOPPADDING', (0, 0), (-1, -1), 12),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6'))
+        ]))
+        
+        story.append(table)
+        story.append(Spacer(1, 20))
+        
+        # Footer
+        import datetime
+        footer_text = f"Generated on {datetime.datetime.now().strftime('%B %d, %Y')}"
+        story.append(Paragraph(footer_text, normal_style))
+        
+        # Build PDF
+        doc.build(story)
+        
+        # Get PDF bytes
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+        
         return pdf_bytes
+        
     except Exception as e:
-        raise Exception(f"WeasyPrint PDF generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
 
-async def ensure_playwright_ready():
-    """Ensure Playwright browsers are installed and ready"""
-    if os.getenv("DYNO"):  # Running on Heroku
-        try:
-            # Try to install browsers if not present
-            import subprocess
-            result = subprocess.run(
-                ["python", "-m", "playwright", "install", "chromium"],
-                capture_output=True, text=True, timeout=120
-            )
-            return True
-        except Exception as e:
-            print(f"Playwright setup failed: {e}")
-            return False
-    return True
 
-async def generate_pdf_from_html(html_content: str, employee_name: str = "employee") -> bytes:
-    """Generate PDF from HTML content using Playwright with WeasyPrint fallback"""
-    
-    # First, try WeasyPrint (more reliable on Heroku)
-    if WEASYPRINT_AVAILABLE:
-        try:
-            print("Attempting PDF generation with WeasyPrint...")
-            return await generate_pdf_with_weasyprint(html_content)
-        except Exception as e:
-            print(f"WeasyPrint failed: {e}, trying Playwright...")
-    
-    # Fallback to Playwright
-    try:
-        # Ensure Playwright is ready
-        if not await ensure_playwright_ready():
-            raise HTTPException(status_code=500, detail="PDF service initialization failed")
-            
-        print("Attempting PDF generation with Playwright...")
-        async with async_playwright() as p:
-            # Launch browser with Heroku-compatible settings
-            browser = await p.chromium.launch(
-                headless=True,
-                args=[
-                    '--no-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu',
-                    '--no-first-run',
-                    '--no-zygote',
-                    '--single-process',
-                    '--disable-extensions',
-                    '--disable-background-timer-throttling',
-                    '--disable-backgrounding-occluded-windows',
-                    '--disable-renderer-backgrounding'
-                ]
-            )
-            page = await browser.new_page()
-            await page.set_content(html_content, wait_until='networkidle')
-            
-            # Generate PDF with professional settings
-            pdf_bytes = await page.pdf(
-                format='A4',
-                margin={
-                    'top': '20mm',
-                    'bottom': '20mm', 
-                    'left': '20mm',
-                    'right': '20mm'
-                },
-                print_background=True,  # Include background colors/images
-                prefer_css_page_size=True
-            )
-            
-            await browser.close()
-            return pdf_bytes
-    except Exception as e:
-        # Final fallback error
-        error_msg = f"Both PDF generation methods failed. Playwright: {str(e)}"
-        if not WEASYPRINT_AVAILABLE:
-            error_msg += " WeasyPrint: Not available"
-        print(error_msg)
-        raise HTTPException(status_code=500, detail=error_msg)
 
 @app.get("/")
 def read_root():
@@ -189,18 +189,8 @@ async def employee_page(request: Request, employee_id: int, format: str = Query(
     })
     
     if format == "pdf":
-        # Get the HTML content
-        html_content = html_response.body.decode('utf-8') if hasattr(html_response, 'body') else str(html_response)
-        
-        # If we can't get the body directly, render the template manually
-        if not hasattr(html_response, 'body'):
-            html_content = templates.get_template("employee.html.jinja").render(
-                request=request, 
-                employee=employee
-            )
-        
-        # Generate PDF
-        pdf_bytes = await generate_pdf_from_html(html_content, employee["name"])
+        # Generate PDF directly from employee data
+        pdf_bytes = await generate_pdf_from_employee_data(employee)
         
         # Create filename
         safe_name = employee["name"].lower().replace(" ", "_").replace(".", "")
@@ -236,26 +226,8 @@ async def api_get_employee(employee_id: int, format: str = Query(default="json",
         raise HTTPException(status_code=404, detail="Employee not found")
     
     if format == "pdf":
-        # Create a simple request object for template rendering
-        from fastapi import Request
-        from fastapi.templating import Jinja2Templates
-        
-        # Create a mock request for template rendering
-        class MockRequest:
-            def __init__(self):
-                self.url = f"http://localhost/api/employee/{employee_id}"
-                self.base_url = "http://localhost"
-        
-        mock_request = MockRequest()
-        
-        # Render HTML template
-        html_content = templates.get_template("employee.html.jinja").render(
-            request=mock_request,
-            employee=employee
-        )
-        
-        # Generate PDF
-        pdf_bytes = await generate_pdf_from_html(html_content, employee["name"])
+        # Generate PDF directly from employee data
+        pdf_bytes = await generate_pdf_from_employee_data(employee)
         
         # Create filename
         safe_name = employee["name"].lower().replace(" ", "_").replace(".", "")
