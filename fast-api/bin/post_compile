@@ -1,3 +1,0 @@
-#!/bin/bash
-echo "-----> Setting up wkhtmltopdf for pdfkit"
-export PATH=$PATH:/app/.apt/usr/bin
