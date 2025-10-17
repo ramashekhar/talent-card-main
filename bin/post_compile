@@ -1,2 +1,32 @@
 #!/bin/bash
+# Heroku post-compile script for FastAPI Talent Card System
+# Ensures proper configuration for subfolder deployment
+
+echo "=== FastAPI Talent Card System - Post Compile ==="
+echo "Repository structure: Root -> fast-api/ subfolder"
+echo "Configuring environment for modular FastAPI application..."
+
+# Verify structure
+if [ -d "fast-api" ]; then
+    echo "✓ fast-api directory found"
+    
+    # Verify core files
+    if [ -f "fast-api/main.py" ]; then
+        echo "✓ main.py found"
+    else
+        echo "❌ main.py not found in fast-api/!"
+        exit 1
+    fi
+    
+    # Verify modules
+    [ -d "fast-api/routers" ] && echo "✓ routers/ found"
+    [ -d "fast-api/src" ] && echo "✓ src/ found" 
+    [ -d "fast-api/config" ] && echo "✓ config/ found"
+    [ -d "fast-api/templates" ] && echo "✓ templates/ found"
+    
+    echo "✅ FastAPI Talent Card System ready for deployment"
+else
+    echo "❌ fast-api directory not found!"
+    exit 1
+fi
 echo "ReportLab PDF generation - no additional setup required"

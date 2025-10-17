@@ -1,6 +1,16 @@
+# FastAPI Talent Card System - Production Dependencies
+# Updated: October 2025
+
+# Core Framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 gunicorn==21.2.0
+
+# Template Engine  
 jinja2==3.1.2
+
+# HTTP Client (CRITICAL - Workday API integration)
+requests==2.31.0
+
+# File Upload Support (if needed for future features)
 python-multipart==0.0.6
-reportlab==4.0.7

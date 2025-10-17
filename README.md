@@ -1,72 +1,160 @@
-# Heroku Examples Collection
+# Python Web Applications Portfolio
 
-A collection of various Python web application examples ready for Heroku deployment.
+A professional collection of production-ready Python web applications with Heroku deployment examples.
 
-## ✅ Successful Deployment Example
+## 🚀 **Live Applications**
 
-**Live FastAPI App:** https://dnu-test-app-f3d2e1f52cdb.herokuapp.com/
+### **Talent Card Generator** - FastAPI Enterprise Application
+**🔗 Production URL:** `[To be deployed]`  
+**📂 Project Folder:** [`fast-api/`](./fast-api/)  
+**🏢 Enterprise Integration:** Workday API + Power Automate
 
-This repository demonstrates successful deployment of Python web apps to Heroku using GitHub integration.
+Professional talent card generation system that integrates with Workday HR systems to create A4 landscape talent cards for organizational use.
 
-## Projects
+**Key Features:**
+- **Workday REST API Integration**: Fetches live employee data
+- **Professional Template Engine**: A4 landscape cards with embedded CSS
+- **Power Automate Ready**: HTML→PDF conversion workflow
+- **Dual-Mode Operation**: Local development + Production deployment
+- **Security**: Environment-based credential management
+- **Missing Photo Handling**: Graceful fallback with SVG placeholders
 
-### 1. FastAPI Example (`fast-api/`)
-A simple FastAPI application with basic endpoints.
+**Architecture:**
+- **Framework**: FastAPI 2.0.0 with modular router architecture
+- **Template Engine**: Jinja2 with professional corporate styling
+- **API Client**: Custom Workday REST client with HTTP Basic Auth
+- **Deployment**: Heroku with Config Vars for security
+- **Development**: Local server with file output for testing
 
-**🚀 Live Demo:** https://dnu-test-app-f3d2e1f52cdb.herokuapp.com/
+**API Endpoints:**
+- `GET /talent-card/{employee_id}` - Generate talent card HTML
+- `GET /employee/{employee_id}` - Individual employee testing
+- `GET /health` - System health monitoring
+- `GET /docs` - Interactive API documentation
 
-**Endpoints:**
-- `GET /` - Welcome message ([Live](https://dnu-test-app-f3d2e1f52cdb.herokuapp.com/))
-- `GET /health` - Health check ([Live](https://dnu-test-app-f3d2e1f52cdb.herokuapp.com/health))
-- `GET /items/{item_id}` - Example with parameters ([Live](https://dnu-test-app-f3d2e1f52cdb.herokuapp.com/items/42?q=test))
-- `GET /info` - Environment information ([Live](https://dnu-test-app-f3d2e1f52cdb.herokuapp.com/info))
-- `GET /docs` - Interactive API documentation ([Live](https://dnu-test-app-f3d2e1f52cdb.herokuapp.com/docs))
+---
 
-**✅ Successfully Deployed to Heroku:**
-- App Name: `dnu-test-app-f3d2e1f52cdb`
-- Deployed from this GitHub repository
-- Running on Heroku with Python buildpack
+## 📁 **Project Structure**
 
-### Future Projects
-- Django example
-- Flask example  
-- Streamlit dashboard
-- API with database integration
+```
+heroku/                              ← Repository root & Heroku deployment
+├── Procfile                         ← Heroku: "cd fast-api && gunicorn..."
+├── requirements.txt                 ← Root dependencies (Heroku uses this)
+├── runtime.txt                      ← Python version specification
+├── README.md                        ← This portfolio overview
+└── fast-api/                        ← Talent Card Generator Application
+    ├── main.py                      ← FastAPI modular entry point
+    ├── routers/                     ← Modular endpoint architecture
+    │   ├── talent_cards.py          ← Main Workday API integration
+    │   ├── employee.py              ← Development testing endpoints  
+    │   └── health.py                ← System monitoring
+    ├── src/                         ← Core business logic
+    │   └── workday_client.py        ← Workday REST API client
+    ├── config/                      ← Configuration management
+    │   ├── workday_config_production.json ← Safe config (GitHub-safe)
+    │   └── workday_config.example.json    ← Template for local dev
+    ├── templates/                   ← Jinja2 template system
+    │   ├── talent-card.html.jinja   ← A4 professional talent cards
+    │   └── employee.html.jinja      ← Development testing template
+    ├── static/                      ← CSS and static assets
+    ├── output/                      ← Local development HTML generation
+    └── README.md                    ← Detailed project documentation
+```
 
-## Deployment Instructions
+---
 
-**Root Level Files (for Heroku detection):**
-- `requirements.txt` - Dependencies for the active project
-- `Procfile` - Heroku process configuration pointing to active project
-- `runtime.txt` - Python version
+## 🔧 **Technology Stack**
 
-**Project Folders:**
-Each project folder also contains its own deployment files for reference.
+### **Backend Frameworks**
+- **FastAPI 2.0.0**: High-performance async web framework
+- **Uvicorn/Gunicorn**: ASGI server with worker processes
+- **Jinja2**: Professional template rendering engine
 
-## Local Development
+### **Integration & APIs**
+- **Workday REST API**: Enterprise HR system integration
+- **HTTP Basic Auth**: Secure API authentication
+- **CORS Middleware**: Cross-origin resource sharing for Power Automate
 
-Navigate to any project folder and run:
+### **Deployment & DevOps**
+- **Heroku**: Cloud platform with git-based deployment
+- **Environment Variables**: Secure credential management
+- **Dual-Mode Config**: Development vs Production configuration
+
+### **Development Tools**
+- **Modular Architecture**: Router-based endpoint organization
+- **Local Development**: File-based output for testing
+- **Interactive Documentation**: Auto-generated API docs
+
+---
+
+## 🚀 **Deployment Guide**
+
+### **Production Deployment (Heroku)**
+
+1. **Repository Setup**: This repository is ready for Heroku deployment
+2. **Environment Variables**: Set secure credentials in Heroku Config Vars
+3. **Automatic Detection**: Heroku uses root-level `Procfile`, `requirements.txt`, `runtime.txt`
+4. **Subdirectory Execution**: Procfile navigates to project folder automatically
+
+### **Quick Deploy to Heroku**
+
 ```bash
-cd project-name
-pip install -r requirements.txt
-python main.py  # or the appropriate entry point
+# 1. Create Heroku app
+heroku create your-talent-card-app
+
+# 2. Set environment variables
+heroku config:set WORKDAY_USERNAME=your_username@tenant
+heroku config:set WORKDAY_PASSWORD=your_password
+
+# 3. Deploy from GitHub (recommended)
+# Connect your GitHub repository in Heroku Dashboard
+# Or deploy via git:
+git push heroku main
+
+# 4. Open application
+heroku open
 ```
 
-## Heroku Deployment via GitHub
+### **Local Development**
 
-1. Push this repo to GitHub
-2. Create a new Heroku app
-3. Connect the app to this GitHub repository
-4. Deploy from main branch
-5. The root-level `Procfile` will automatically run the FastAPI app from the `fast-api/` folder
+Each project includes detailed setup instructions in its README.md file.
 
-**For future projects:** Update the root-level `Procfile`, `requirements.txt`, and `runtime.txt` to point to your desired project folder.
+---
 
-## Structure
-```
-heroku/
-├── fast-api/          # FastAPI example
-├── django-app/        # Django example (coming soon)
-├── flask-app/         # Flask example (coming soon)
-└── README.md          # This file
-```
+## 📋 **Future Applications**
+
+This repository is designed to showcase multiple Python web applications:
+
+- **✅ Talent Card Generator** (FastAPI) - Production ready
+- **🔄 Django Dashboard** - Coming soon
+- **🔄 Flask API** - Coming soon  
+- **🔄 Streamlit Analytics** - Coming soon
+
+---
+
+## 🏗️ **Architecture Highlights**
+
+### **Enterprise Integration Pattern**
+- External API integration (Workday)
+- Secure credential management
+- Professional template rendering
+- Cross-platform compatibility (Power Automate)
+
+### **Deployment Best Practices**
+- Environment-based configuration
+- Security-first approach (no credentials in code)
+- Modular architecture for maintainability
+- Comprehensive error handling
+
+### **Development Workflow**
+- Local development with file output
+- Production deployment with in-memory processing
+- Interactive API documentation
+- Modular router-based architecture
+
+---
+
+**Portfolio maintained by**: [Your Organization]  
+**Last Updated**: October 2025  
+**Repository**: `talent-card-agent`  
+**License**: [Your License]

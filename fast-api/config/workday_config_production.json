@@ -1,0 +1,17 @@
+{
+  "_comment": "Production Workday Configuration - Safe for GitHub (credentials via environment variables)",
+  "endpoint": "https://wd5-impl-services1.workday.com/ccx/service/YOUR_TENANT/Human_Resources/v44.1",
+  "profile_endpoint": "https://wd5-impl-services1.workday.com/ccx/service/customreport2/YOUR_TENANT/YOUR_REPORT_ID/AI_Campbell_Talent_Card",
+  "version": "v44.1",
+  "tenant": "campbellsoup1",
+  "_deployment_instructions": {
+    "heroku_config_vars": [
+      "WORKDAY_USERNAME=your_workday_username",
+      "WORKDAY_PASSWORD=your_workday_password"
+    ],
+    "heroku_commands": [
+      "heroku config:set WORKDAY_USERNAME=your_username",
+      "heroku config:set WORKDAY_PASSWORD=your_password"
+    ]
+  }
+}

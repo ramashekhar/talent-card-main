@@ -1,127 +1,72 @@
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse
+"""
+Talent Card Agent - FastAPI Application
+
+A focused FastAPI application for generating professional talent cards
+from Workday API with Power Automate integration support.
+
+Features:
+- Workday API integration for live talent data
+- Professional A4 landscape talent card generation  
+- Employee testing pages (for development/testing)
+- Power Automate compatible HTML output
+- Secure, in-memory processing (no persistent data storage)
+"""
+
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 import os
-import json
-from typing import List, Dict, Optional
+
+# Import routers
+from routers import employee, talent_cards, health
 
 # Create FastAPI instance
-app = FastAPI(title="Employee Management API", version="1.0.0")
+app = FastAPI(
+    title="Talent Card Agent API",
+    description="Professional talent card generation with Workday integration",
+    version="2.0.0"
+)
+
+# Add CORS middleware for Power Automate integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://make.powerautomate.com",
+        "https://flow.microsoft.com", 
+        "https://teams.microsoft.com",
+        "https://outlook.office.com",
+        "*"  # Allow all for testing - restrict in production
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Set up templates
-templates = Jinja2Templates(directory="templates")
-
-# Load employee data
-def load_employees() -> List[Dict]:
-    """Load employee data from JSON file"""
-    try:
-        with open("data/employees.json", "r") as file:
-            data = json.load(file)
-            return data["employees"]
-    except FileNotFoundError:
-        return []
-
-def get_employee_by_id(employee_id: int) -> Optional[Dict]:
-    """Get a specific employee by ID"""
-    employees = load_employees()
-    for employee in employees:
-        if employee["employee_id"] == employee_id:
-            return employee
-    return None
+# Include routers
+app.include_router(employee.router, tags=["Employee Testing"])
+app.include_router(talent_cards.router, tags=["Talent Cards"])
+app.include_router(health.router, tags=["System"])
 
 @app.get("/")
 def read_root():
     """
-    Root endpoint that returns a welcome message
+    Root endpoint with application information and available features
     """
     return {
-        "message": "Hello World! This is a FastAPI Employee Management System running on Heroku!",
-        "features": [
-            "Employee directory at /employees",
-            "Individual employee pages at /employee/{id}",
-            "JSON API endpoints at /api/employee/{id}",
-            "Interactive docs at /docs"
-        ],
-        "sample_employees": [101, 102, 103, 104, 105, 106]
-    }
-
-# HTML ENDPOINTS
-@app.get("/employees", response_class=HTMLResponse)
-async def employees_page(request: Request):
-    """
-    HTML page showing all employees
-    """
-    employees = load_employees()
-    return templates.TemplateResponse("employees.html.jinja", {
-        "request": request, 
-        "employees": employees
-    })
-
-@app.get("/employee/{employee_id}", response_class=HTMLResponse)
-async def employee_page(request: Request, employee_id: int):
-    """
-    Employee page - returns HTML
-    """
-    employee = get_employee_by_id(employee_id)
-    if not employee:
-        return templates.TemplateResponse("employee_not_found.html.jinja", {
-            "request": request,
-            "employee_id": employee_id
-        }, status_code=404)
-    
-    return templates.TemplateResponse("employee.html.jinja", {
-        "request": request,
-        "employee": employee
-    })
-
-# JSON API ENDPOINTS
-@app.get("/api/employees")
-def api_get_all_employees():
-    """
-    JSON API endpoint to get all employees
-    """
-    employees = load_employees()
-    return {"employees": employees, "count": len(employees)}
-
-@app.get("/api/employee/{employee_id}")
-def api_get_employee(employee_id: int):
-    """
-    API endpoint to get employee data as JSON
-    """
-    employee = get_employee_by_id(employee_id)
-    if not employee:
-        raise HTTPException(status_code=404, detail="Employee not found")
-    
-    return employee
-
-@app.get("/health")
-def health_check():
-    """
-    Health check endpoint
-    """
-    return {"status": "healthy", "message": "API is running successfully"}
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str = None):
-    """
-    Example endpoint with path and query parameters
-    """
-    return {"item_id": item_id, "q": q, "message": f"You requested item {item_id}"}
-
-@app.get("/info")
-def get_info():
-    """
-    Endpoint that returns some environment information
-    """
-    port = os.getenv("PORT", "8000")
-    return {
-        "app": "Simple FastAPI",
-        "port": port,
-        "environment": "Heroku" if os.getenv("DYNO") else "Local"
+        "message": "Welcome to Talent Card Agent API",
+        "description": "Professional talent card generation with Workday integration",
+        "features": {
+            "talent_cards": "/talent-card/{employee_id} - Generate Workday talent cards (MAIN FEATURE)",
+            "employee_testing": "/employee/{employee_id} - Test employee pages (local data)",
+            "system": "/health, /info - System status and information",
+            "documentation": "/docs - Interactive API documentation"
+        },
+        "sample_employees_testing": [101, 102, 103, 104, 105, 106],
+        "sample_workday_id": "1000130722",
+        "environment": "Heroku" if os.getenv("DYNO") else "Local Development"
     }
 
 if __name__ == "__main__":

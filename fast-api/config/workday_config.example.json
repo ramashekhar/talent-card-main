@@ -1,0 +1,9 @@
+{
+  "_comment": "Workday API Configuration - Safe for GitHub (no credentials)",
+  "endpoint": "https://wd5-impl-services1.workday.com/ccx/service/YOUR_TENANT/Human_Resources/v44.1",
+  "profile_endpoint": "https://wd5-impl-services1.workday.com/ccx/service/customreport2/YOUR_TENANT/YOUR_REPORT_ID/AI_Campbell_Talent_Card",
+  "version": "v44.1",
+  "tenant": "YOUR_TENANT",
+  "_deployment_note": "For local development: Copy this to workday_config.json and add username/password fields",
+  "_heroku_note": "For Heroku: Set environment variables WORKDAY_USERNAME and WORKDAY_PASSWORD in Config Vars"
+}

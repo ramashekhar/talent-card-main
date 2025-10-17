@@ -1,19 +1,33 @@
 {
-  "name": "FastAPI Employee Management with PDF",
-  "description": "A FastAPI application with HTML templates and PDF generation using Playwright",
-  "keywords": ["fastapi", "python", "pdf", "playwright", "employee-management"],
+  "name": "Talent Card Generator - Workday Integration",
+  "description": "Professional FastAPI application that generates A4 landscape talent cards by integrating with Workday HR systems for Power Automate workflows",
+  "keywords": ["fastapi", "python", "workday", "talent-cards", "hr-integration", "power-automate", "jinja2"],
+  "website": "https://github.com/ramashekhar/heroku",
+  "repository": "https://github.com/ramashekhar/heroku",
   "buildpacks": [
-    {
-      "url": "https://github.com/heroku/heroku-buildpack-apt"
-    },
     {
       "url": "heroku/python"
     }
   ],
+  "scripts": {
+    "postdeploy": "echo 'FastAPI Talent Card System deployed successfully'"
+  },
   "env": {
-    "PLAYWRIGHT_BROWSERS_PATH": {
-      "description": "Path for Playwright browsers",
-      "value": "/app/.playwright"
+    "WORKDAY_USERNAME": {
+      "description": "Workday API username (format: username@tenant)",
+      "required": true
+    },
+    "WORKDAY_PASSWORD": {
+      "description": "Workday API password",
+      "required": true
     }
-  }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "eco"
+    }
+  },
+  "addons": [],
+  "stack": "heroku-22"
 }
