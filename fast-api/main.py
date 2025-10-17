@@ -5,11 +5,7 @@ from fastapi.templating import Jinja2Templates
 import os
 import json
 from typing import List, Dict, Optional
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.lib import colors
+import pdfkit
 from io import BytesIO
 
 # Create FastAPI instance
@@ -40,93 +36,161 @@ def get_employee_by_id(employee_id: int) -> Optional[Dict]:
     return None
 
 async def generate_pdf_from_employee_data(employee: Dict) -> bytes:
-    """Generate PDF from employee data using ReportLab"""
+    """Generate PDF from employee data using pdfkit (pixel-perfect HTML→PDF)"""
     try:
-        # Create a BytesIO buffer to hold PDF data
-        buffer = BytesIO()
+        # Build HTML content that matches our template styling
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Employee Details - {employee['name']}</title>
+            <style>
+                body {{
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    line-height: 1.6;
+                    margin: 0;
+                    padding: 20px;
+                    background-color: #f5f5f5;
+                    color: #333;
+                }}
+                .container {{
+                    max-width: 800px;
+                    margin: 0 auto;
+                    background: white;
+                    padding: 30px;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                }}
+                .header {{
+                    text-align: center;
+                    margin-bottom: 30px;
+                    padding-bottom: 20px;
+                    border-bottom: 2px solid #e9ecef;
+                }}
+                .employee-card {{
+                    background: #f8f9fa;
+                    padding: 25px;
+                    border-radius: 8px;
+                    border-left: 5px solid #007bff;
+                    margin: 20px 0;
+                }}
+                .employee-name {{
+                    color: #007bff;
+                    font-size: 2em;
+                    margin-bottom: 10px;
+                    font-weight: 600;
+                }}
+                .employee-info {{
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 15px;
+                    margin: 20px 0;
+                }}
+                .info-item {{
+                    background: white;
+                    padding: 15px;
+                    border-radius: 5px;
+                    border: 1px solid #dee2e6;
+                }}
+                .info-label {{
+                    font-weight: bold;
+                    color: #495057;
+                    font-size: 0.9em;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }}
+                .info-value {{
+                    margin-top: 5px;
+                    font-size: 1.1em;
+                    color: #212529;
+                }}
+                .footer {{
+                    margin-top: 30px;
+                    padding-top: 20px;
+                    border-top: 1px solid #e9ecef;
+                    text-align: center;
+                    font-size: 0.9em;
+                    color: #6c757d;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Employee Profile</h1>
+                    <p>FastAPI Employee Management System</p>
+                </div>
+
+                <div class="employee-card">
+                    <div class="employee-name">{employee['name']}</div>
+                    
+                    <div class="employee-info">
+                        <div class="info-item">
+                            <div class="info-label">Employee ID</div>
+                            <div class="info-value">{employee['employee_id']}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-label">Position</div>
+                            <div class="info-value">{employee['position']}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-label">Department</div>
+                            <div class="info-value">{employee['department']}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-label">Manager</div>
+                            <div class="info-value">{employee['manager']}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-label">Email</div>
+                            <div class="info-value">{employee['email']}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer">
+                    Generated on {__import__('datetime').datetime.now().strftime('%B %d, %Y')}
+                </div>
+            </div>
+        </body>
+        </html>
+        """
         
-        # Create PDF document
-        doc = SimpleDocTemplate(buffer, pagesize=A4, 
-                              rightMargin=72, leftMargin=72,
-                              topMargin=72, bottomMargin=18)
+        # Configure pdfkit options for better quality
+        options = {
+            'page-size': 'A4',
+            'margin-top': '0.75in',
+            'margin-right': '0.75in',
+            'margin-bottom': '0.75in',
+            'margin-left': '0.75in',
+            'encoding': "UTF-8",
+            'no-outline': None,
+            'enable-local-file-access': None
+        }
         
-        # Get styles
-        styles = getSampleStyleSheet()
-        
-        # Custom styles
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=24,
-            spaceAfter=30,
-            textColor=colors.HexColor('#007bff'),
-            alignment=1  # Center alignment
-        )
-        
-        heading_style = ParagraphStyle(
-            'CustomHeading',
-            parent=styles['Heading2'],
-            fontSize=14,
-            spaceBefore=12,
-            spaceAfter=6,
-            textColor=colors.HexColor('#495057')
-        )
-        
-        normal_style = ParagraphStyle(
-            'CustomNormal',
-            parent=styles['Normal'],
-            fontSize=12,
-            spaceBefore=6,
-            spaceAfter=6
-        )
-        
-        # Build PDF content
-        story = []
-        
-        # Title
-        story.append(Paragraph("Employee Profile", title_style))
-        story.append(Spacer(1, 12))
-        
-        # Employee name
-        story.append(Paragraph(f"<b>{employee['name']}</b>", heading_style))
-        story.append(Spacer(1, 12))
-        
-        # Employee details table
-        data = [
-            ['Employee ID:', str(employee['employee_id'])],
-            ['Position:', employee['position']],
-            ['Department:', employee['department']],
-            ['Manager:', employee['manager']],
-            ['Email:', employee['email']]
-        ]
-        
-        table = Table(data, colWidths=[2*inch, 4*inch])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8f9fa')),
-            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#495057')),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('TOPPADDING', (0, 0), (-1, -1), 12),
-            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dee2e6'))
-        ]))
-        
-        story.append(table)
-        story.append(Spacer(1, 20))
-        
-        # Footer
-        import datetime
-        footer_text = f"Generated on {datetime.datetime.now().strftime('%B %d, %Y')}"
-        story.append(Paragraph(footer_text, normal_style))
-        
-        # Build PDF
-        doc.build(story)
-        
-        # Get PDF bytes
-        pdf_bytes = buffer.getvalue()
-        buffer.close()
+        # Generate PDF from HTML
+        try:
+            pdf_bytes = pdfkit.from_string(html_content, False, options=options)
+        except (OSError, IOError) as e:
+            if "wkhtmltopdf" in str(e):
+                # On local development without wkhtmltopdf, provide helpful error
+                raise HTTPException(
+                    status_code=503, 
+                    detail={
+                        "error": "PDF generation unavailable",
+                        "reason": "wkhtmltopdf binary not found",
+                        "local_development": "Install wkhtmltopdf from https://wkhtmltopdf.org/downloads.html",
+                        "heroku_deployment": "PDF generation will work on Heroku with configured buildpacks",
+                        "html_alternative": f"View HTML version at /employee/{employee['employee_id']}"
+                    }
+                )
+            raise
         
         return pdf_bytes
         
