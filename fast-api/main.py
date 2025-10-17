@@ -8,6 +8,10 @@ from typing import List, Dict, Optional
 from playwright.async_api import async_playwright
 import asyncio
 
+# Set Playwright environment variables for Heroku
+if os.getenv("DYNO"):  # Running on Heroku
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/app/.playwright"
+
 # Create FastAPI instance
 app = FastAPI(title="Employee Management API", version="1.0.0")
 
@@ -37,26 +41,42 @@ def get_employee_by_id(employee_id: int) -> Optional[Dict]:
 
 async def generate_pdf_from_html(html_content: str, employee_name: str = "employee") -> bytes:
     """Generate PDF from HTML content using Playwright"""
-    async with async_playwright() as p:
-        browser = await p.chromium.launch()
-        page = await browser.new_page()
-        await page.set_content(html_content)
-        
-        # Generate PDF with professional settings
-        pdf_bytes = await page.pdf(
-            format='A4',
-            margin={
-                'top': '20mm',
-                'bottom': '20mm', 
-                'left': '20mm',
-                'right': '20mm'
-            },
-            print_background=True,  # Include background colors/images
-            prefer_css_page_size=True
-        )
-        
-        await browser.close()
-        return pdf_bytes
+    try:
+        async with async_playwright() as p:
+            # Launch browser with Heroku-compatible settings
+            browser = await p.chromium.launch(
+                headless=True,
+                args=[
+                    '--no-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--single-process',
+                    '--disable-extensions'
+                ]
+            )
+            page = await browser.new_page()
+            await page.set_content(html_content, wait_until='networkidle')
+            
+            # Generate PDF with professional settings
+            pdf_bytes = await page.pdf(
+                format='A4',
+                margin={
+                    'top': '20mm',
+                    'bottom': '20mm', 
+                    'left': '20mm',
+                    'right': '20mm'
+                },
+                print_background=True,  # Include background colors/images
+                prefer_css_page_size=True
+            )
+            
+            await browser.close()
+            return pdf_bytes
+    except Exception as e:
+        # Fallback error handling for Heroku deployment issues
+        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
 
 @app.get("/")
 def read_root():
