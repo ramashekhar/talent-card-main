@@ -12,6 +12,13 @@ import asyncio
 if os.getenv("DYNO"):  # Running on Heroku
     os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/app/.playwright"
 
+# Try to import WeasyPrint for fallback
+try:
+    from weasyprint import HTML, CSS
+    WEASYPRINT_AVAILABLE = True
+except ImportError:
+    WEASYPRINT_AVAILABLE = False
+
 # Create FastAPI instance
 app = FastAPI(title="Employee Management API", version="1.0.0")
 
@@ -39,6 +46,18 @@ def get_employee_by_id(employee_id: int) -> Optional[Dict]:
             return employee
     return None
 
+async def generate_pdf_with_weasyprint(html_content: str) -> bytes:
+    """Generate PDF using WeasyPrint as fallback"""
+    try:
+        if not WEASYPRINT_AVAILABLE:
+            raise Exception("WeasyPrint not available")
+        
+        # Generate PDF from HTML string
+        pdf_bytes = HTML(string=html_content).write_pdf()
+        return pdf_bytes
+    except Exception as e:
+        raise Exception(f"WeasyPrint PDF generation failed: {str(e)}")
+
 async def ensure_playwright_ready():
     """Ensure Playwright browsers are installed and ready"""
     if os.getenv("DYNO"):  # Running on Heroku
@@ -56,12 +75,23 @@ async def ensure_playwright_ready():
     return True
 
 async def generate_pdf_from_html(html_content: str, employee_name: str = "employee") -> bytes:
-    """Generate PDF from HTML content using Playwright"""
+    """Generate PDF from HTML content using Playwright with WeasyPrint fallback"""
+    
+    # First, try WeasyPrint (more reliable on Heroku)
+    if WEASYPRINT_AVAILABLE:
+        try:
+            print("Attempting PDF generation with WeasyPrint...")
+            return await generate_pdf_with_weasyprint(html_content)
+        except Exception as e:
+            print(f"WeasyPrint failed: {e}, trying Playwright...")
+    
+    # Fallback to Playwright
     try:
         # Ensure Playwright is ready
         if not await ensure_playwright_ready():
             raise HTTPException(status_code=500, detail="PDF service initialization failed")
             
+        print("Attempting PDF generation with Playwright...")
         async with async_playwright() as p:
             # Launch browser with Heroku-compatible settings
             browser = await p.chromium.launch(
@@ -98,8 +128,10 @@ async def generate_pdf_from_html(html_content: str, employee_name: str = "employ
             await browser.close()
             return pdf_bytes
     except Exception as e:
-        # Fallback error handling for Heroku deployment issues
-        error_msg = f"PDF generation failed: {str(e)}"
+        # Final fallback error
+        error_msg = f"Both PDF generation methods failed. Playwright: {str(e)}"
+        if not WEASYPRINT_AVAILABLE:
+            error_msg += " WeasyPrint: Not available"
         print(error_msg)
         raise HTTPException(status_code=500, detail=error_msg)
 
