@@ -5,8 +5,14 @@ from fastapi.templating import Jinja2Templates
 import os
 import json
 from typing import List, Dict, Optional
-import pdfkit
 from io import BytesIO
+
+# Conditional import for pdfkit
+try:
+    import pdfkit
+    PDFKIT_AVAILABLE = True
+except ImportError:
+    PDFKIT_AVAILABLE = False
 
 # Create FastAPI instance
 app = FastAPI(title="Employee Management API", version="1.0.0")
@@ -38,6 +44,17 @@ def get_employee_by_id(employee_id: int) -> Optional[Dict]:
 async def generate_pdf_from_employee_data(employee: Dict) -> bytes:
     """Generate PDF from employee data using pdfkit (pixel-perfect HTML→PDF)"""
     try:
+        # Check if pdfkit is available
+        if not PDFKIT_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "PDF generation unavailable",
+                    "reason": "pdfkit module not available",
+                    "solution": "Install pdfkit and wkhtmltopdf dependencies",
+                    "html_alternative": f"View HTML version at /employee/{employee['employee_id']}"
+                }
+            )
         # Build HTML content that matches our template styling
         html_content = f"""
         <!DOCTYPE html>
