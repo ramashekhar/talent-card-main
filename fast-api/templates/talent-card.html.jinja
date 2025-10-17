@@ -105,6 +105,11 @@
         .talent-column h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #2c3e50; }
         .talent-column p { font-size: 12px; line-height: 1.6; margin-bottom: 8px; color: #555; text-align: justify; }
         
+        /* List styling to match paragraph formatting for consistent appearance */
+        .talent-column ul { font-size: 12px; line-height: 1.6; margin-bottom: 8px; color: #555; padding-left: 0; list-style: none; }
+        .talent-column li { margin-bottom: 8px; text-align: justify; }
+        .talent-column li b { font-weight: 600; color: #2c3e50; }
+        
         /* Career goals section - white card with subtle shadow */
         .goals-section { background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
         .goal-item { margin-bottom: 8px; }
@@ -253,13 +258,13 @@
                         <div class="talent-column">
                             <h3>Development Opportunities</h3>
                             {# Handle both HTML and plain text formats from API #}
-                            {# If content has HTML tags, render as-is; otherwise convert newlines to paragraphs #}
-                            {% if '<p>' in entry.Development_Areas or '<div>' in entry.Development_Areas %}
-                                {{ entry.Development_Areas | safe }}
+                            {# Apply filters to decode HTML entities and fix empty paragraphs for Power Automate compatibility #}
+                            {% if '<p>' in entry.Development_Areas or '<div>' in entry.Development_Areas or '<ul>' in entry.Development_Areas %}
+                                {{ entry.Development_Areas | decode_entities | fix_empty_paragraphs | safe }}
                             {% else %}
                                 {% for line in entry.Development_Areas.split('\n') %}
                                     {% if line.strip() %}
-                                        <p>{{ line.strip() }}</p>
+                                        <p>{{ line.strip() | decode_entities }}</p>
                                     {% endif %}
                                 {% endfor %}
                             {% endif %}
@@ -274,13 +279,13 @@
                         <div class="goal-item">
                             <strong>Career interests:</strong> 
                             <div style="font-size: 12px; line-height: 1.6; color: #555;">
-                                {{ entry.Career_Interests | safe }}
+                                {{ entry.Career_Interests | decode_entities | fix_empty_paragraphs | safe }}
                             </div>
                         </div>
                         <div class="goal-item">
                             <strong>Career Preferences:</strong>
                             <div style="font-size: 12px; line-height: 1.6; color: #555;">
-                                {{ entry.Career_Preferences | safe }}
+                                {{ entry.Career_Preferences | decode_entities | fix_empty_paragraphs | safe }}
                             </div>
                         </div>
                     </div>

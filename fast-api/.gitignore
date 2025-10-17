@@ -12,7 +12,12 @@ config/workday_config.json
 
 # Local development files
 output/                    # Generated HTML files (development only)
+compare/                   # HTML comparison files for testing
 DEVELOPMENT_LOG.md         # Internal development tracking
+
+# Template backups
+templates/*.backup-*       # Timestamped template backups
+templates/*.golden-backup-*
 
 # Environment variables
 .env

@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse
 from jinja2 import Environment, FileSystemLoader
 import os
 import json
+import html  # Add this import for HTML entity decoding
 from pathlib import Path
 from typing import Dict
 
@@ -99,6 +100,22 @@ async def get_talent_card(request: Request, employee_id: str):
         
         # Render talent card template to string
         env = Environment(loader=FileSystemLoader("templates"))
+        
+        # Add custom filters for Power Automate HTML-to-PDF compatibility
+        def decode_html_entities(text):
+            """Decode HTML entities like &#39; to prevent Power Automate HTML-to-PDF issues"""
+            if text and isinstance(text, str):
+                return html.unescape(text)
+            return text
+        
+        def fix_empty_paragraphs(text):
+            """Replace empty <p></p> tags with <p>&nbsp;</p> for proper spacing and Power Automate compatibility"""
+            if text and isinstance(text, str):
+                return text.replace('<p></p>', '<p>&nbsp;</p>')
+            return text
+        
+        env.filters['decode_entities'] = decode_html_entities
+        env.filters['fix_empty_paragraphs'] = fix_empty_paragraphs
         template = env.get_template("talent-card.html.jinja")
         
         # Render template with profile data

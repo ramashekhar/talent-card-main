@@ -325,7 +325,47 @@ fast-api/
 
 ---
 
-## 🔧 **Troubleshooting**
+## � **Power Automate Integration**
+
+### **HTML-to-PDF Compatibility**
+
+This application is specifically optimized for **Microsoft Power Automate HTML-to-PDF conversion** workflows. The following compatibility features ensure reliable PDF generation:
+
+#### **Template Optimizations**
+- **Empty Paragraph Handling**: Automatically converts `<p></p>` to `<p>&nbsp;</p>` to prevent sandbox exceptions
+- **Consistent Font Sizing**: CSS rules ensure uniform 12px font across all content types (`<p>`, `<ul>`, `<li>`)
+- **Mixed Format Support**: Handles rich text data from Workday (HTML lists, paragraphs, plain text)
+- **HTML Entity Decoding**: Processes special characters (`&#39;` → `'`) for clean PDF output
+
+#### **Power Automate Workflow Steps**
+1. **HTTP Request**: Call `/talent-card/{employee_id}` endpoint
+2. **Get Response**: Receive clean HTML optimized for PDF conversion
+3. **OneDrive Action**: Use "Convert HTML to PDF" with the response body
+4. **Result**: Professional A4 landscape PDF talent card
+
+#### **Known Compatibility Issues Resolved**
+- ✅ **Empty `<p></p>` tags**: Replaced with `<p>&nbsp;</p>` for proper spacing
+- ✅ **Font size inconsistencies**: Added CSS for `<ul><li>` elements to match paragraph styling  
+- ✅ **HTML entity encoding**: Automatic decoding prevents conversion errors
+- ✅ **Mixed content formats**: Unified handling of HTML and plain text from Workday
+
+#### **Testing Power Automate Integration**
+```http
+# Test with known working employee
+GET /talent-card/1000212306
+
+# Test with previously problematic employee (now fixed)  
+GET /talent-card/1000130722
+```
+
+#### **Troubleshooting Power Automate Issues**
+- **Sandbox Exception**: Check for empty paragraph tags (now auto-fixed)
+- **Font Size Problems**: Verify CSS loads properly in Power Automate preview
+- **Encoding Issues**: HTML entities are automatically decoded by template filters
+
+---
+
+## �🔧 **Troubleshooting**
 
 ### **Common Issues**
 
