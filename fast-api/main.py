@@ -39,9 +39,29 @@ def get_employee_by_id(employee_id: int) -> Optional[Dict]:
             return employee
     return None
 
+async def ensure_playwright_ready():
+    """Ensure Playwright browsers are installed and ready"""
+    if os.getenv("DYNO"):  # Running on Heroku
+        try:
+            # Try to install browsers if not present
+            import subprocess
+            result = subprocess.run(
+                ["python", "-m", "playwright", "install", "chromium"],
+                capture_output=True, text=True, timeout=120
+            )
+            return True
+        except Exception as e:
+            print(f"Playwright setup failed: {e}")
+            return False
+    return True
+
 async def generate_pdf_from_html(html_content: str, employee_name: str = "employee") -> bytes:
     """Generate PDF from HTML content using Playwright"""
     try:
+        # Ensure Playwright is ready
+        if not await ensure_playwright_ready():
+            raise HTTPException(status_code=500, detail="PDF service initialization failed")
+            
         async with async_playwright() as p:
             # Launch browser with Heroku-compatible settings
             browser = await p.chromium.launch(
@@ -53,7 +73,10 @@ async def generate_pdf_from_html(html_content: str, employee_name: str = "employ
                     '--no-first-run',
                     '--no-zygote',
                     '--single-process',
-                    '--disable-extensions'
+                    '--disable-extensions',
+                    '--disable-background-timer-throttling',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-renderer-backgrounding'
                 ]
             )
             page = await browser.new_page()
@@ -76,7 +99,9 @@ async def generate_pdf_from_html(html_content: str, employee_name: str = "employ
             return pdf_bytes
     except Exception as e:
         # Fallback error handling for Heroku deployment issues
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+        error_msg = f"PDF generation failed: {str(e)}"
+        print(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 @app.get("/")
 def read_root():
