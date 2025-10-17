@@ -352,10 +352,10 @@ This application is specifically optimized for **Microsoft Power Automate HTML-t
 #### **Testing Power Automate Integration**
 ```http
 # Test with known working employee
-GET /talent-card/1000212306
+GET /talent-card/{employee_id}
 
 # Test with previously problematic employee (now fixed)  
-GET /talent-card/1000130722
+GET /talent-card/{employee_id}
 ```
 
 #### **Troubleshooting Power Automate Issues**
