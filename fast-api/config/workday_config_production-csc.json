@@ -5,12 +5,16 @@
   "tenant": "campbellsoup1",
   "_deployment_instructions": {
     "heroku_config_vars": [
-      "WORKDAY_USERNAME=your_workday_username",
-      "WORKDAY_PASSWORD=your_workday_password"
+      "WORKDAY_USERNAME_CSC=your_workday_username@tenant",
+      "WORKDAY_PASSWORD_CSC=your_workday_password"
+    ],
+    "azure_config_vars": [
+      "WORKDAY_USERNAME_CSC=your_workday_username@tenant",
+      "WORKDAY_PASSWORD_CSC=your_workday_password"
     ],
     "heroku_commands": [
-      "heroku config:set WORKDAY_USERNAME=your_username",
-      "heroku config:set WORKDAY_PASSWORD=your_password"
+      "heroku config:set WORKDAY_USERNAME_CSC=your_username@tenant",
+      "heroku config:set WORKDAY_PASSWORD_CSC=your_password"
     ]
   }
 }

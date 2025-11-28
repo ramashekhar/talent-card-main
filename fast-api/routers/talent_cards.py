@@ -62,13 +62,16 @@ def load_workday_config(tenant: str = None) -> Dict:
     with open(config_file, 'r', encoding='utf-8') as f:
         config = json.load(f)
     
-    # Override credentials with environment variables if available (Heroku deployment)
-    if 'WORKDAY_USERNAME' in os.environ and 'WORKDAY_PASSWORD' in os.environ:
-        config['username'] = os.environ['WORKDAY_USERNAME']
-        config['password'] = os.environ['WORKDAY_PASSWORD']
-        print("✓ Using credentials from environment variables (Heroku/Azure)")
+    # Override credentials with tenant-specific environment variables if available
+    username_key = f'WORKDAY_USERNAME_{tenant.upper()}'
+    password_key = f'WORKDAY_PASSWORD_{tenant.upper()}'
+    
+    if username_key in os.environ and password_key in os.environ:
+        config['username'] = os.environ[username_key]
+        config['password'] = os.environ[password_key]
+        print(f"✓ Using credentials from environment variables for {tenant.upper()} (Heroku/Azure)")
     else:
-        print("✓ Using credentials from config file (local development)")
+        print(f"✓ Using credentials from config file for {tenant.upper()} (local development)")
     
     # Validate required fields
     required_fields = ['endpoint', 'username', 'password', 'version']
