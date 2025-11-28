@@ -1,7 +1,6 @@
 {
   "_comment": "Production Workday Configuration - Safe for GitHub (credentials via environment variables)",
-  "endpoint": "https://wd5-impl-services1.workday.com/ccx/service/campbellsoup1/Human_Resources/v44.1",
-  "profile_endpoint": "https://wd5-impl-services1.workday.com/ccx/service/customreport2/campbellsoup1/9000242713/AI_Campbell_Talent_Card",
+  "endpoint": "https://wd5-impl-services1.workday.com/ccx/service/customreport2/campbellsoup1/9000242713/AI_Campbell_Talent_Card",
   "version": "v44.1",
   "tenant": "campbellsoup1",
   "_deployment_instructions": {

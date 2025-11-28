@@ -1,0 +1,329 @@
+{# 
+    Talent Card Profile Template (v4)
+    
+    This Jinja2 template generates a professional employee profile card with:
+    - Header section with employee photo, basic info, and performance metrics
+    - Sidebar with work experience, certifications, and mobility preferences
+    - Main content area with talent summary, career aspirations, skills, and development actions
+    
+    Template Variables (v4 JSON structure with Report_Entry wrapper):
+    - Dynamic from v4 JSON: Worker, manager, Business_Title_Worker, Key_Strengths, Development_Areas, 
+                            Career_Aspirations, Career_Interests, base64
+    - Hardcoded values: grade, function, business, location, retention_risk, time_in_role_years, 
+                        years_of_service, regrettable_loss, performance, access_potential, 
+                        work_experience, certifications, mobility, goals (long-term), 
+                        skill_sets, development_actions
+    
+    Output Format: A4 landscape (297mm x 210mm) optimized for printing
+#}
+{% set entry = Report_Entry[0] %}
+{# Extract employee name from "Name (ID)" format #}
+{% set name = entry.Worker.split('(')[0].strip() %}
+{# Build photo data URL from base64 field if available, otherwise use placeholder #}
+{% if entry.base64 %}
+    {% set photo_data_url = 'data:image/jpeg;base64,' + entry.base64 %}
+{% else %}
+    {% set photo_data_url = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNGM0Y0RjYiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjM3LjUiIHI9IjEyLjUiIGZpbGw9IiM5Q0E0QUYiLz48cGF0aCBkPSJNNzguMTI1IDgxLjI1Qzc4LjEyNSA2Ni4yNSA2NS42MjUgNTYuMjUgNTAgNTYuMjVDMzQuMzc1IDU2LjI1IDIxLjg3NSA2Ni4yNSAyMS44NzUgODEuMjVINzguMTI1WiIgZmlsbD0iIzlDQTRBRiIvPjwvc3ZnPg==' %}
+{% endif %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talent Card</title>
+    <style>
+        /* Print-specific page settings for A4 landscape */
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+        /* Ensure consistent rendering when printing */
+        @media print {
+            body { margin: 0; padding: 0; width: 297mm; height: 210mm; }
+            .container { page-break-after: avoid; page-break-inside: avoid; }
+            /* Preserve background colors and images in PDF */
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+        }
+        
+        /* Global reset and base styles */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* Eliminate all default margins from html and body */
+        html, body { margin: 0; padding: 0; }
+        /* Main page container - fixed A4 landscape dimensions */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; width: 297mm; height: 210mm; background: white; overflow: hidden; }
+        
+        /* Overall layout container with header and content sections */
+        .container { background: white; width: 100%; height: 100%; display: grid; grid-template-rows: auto 1fr; }
+        
+        /* Header section with red gradient - contains photo, basic info, and performance cards */
+        .header { background: linear-gradient(135deg, #ff612b 0%, #002677 100%); color: white; padding: 18px 25px; display: grid; grid-template-columns: 90px 1fr auto; gap: 20px; align-items: center; }
+        /* Employee photo avatar - circular with white border */
+        .avatar { width: 90px; height: 90px; border-radius: 50%; border: 4px solid white; background: white; object-fit: cover; }
+        
+        /* Employee name and title */
+        .header-info h1 { font-size: 24px; margin-bottom: 6px; font-weight: 600; }
+        
+        /* Grid layout for basic employee details (3 columns) */
+        .header-details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 12px; }
+        .header-details div { line-height: 1.5; }
+        .header-details strong { font-size: 12px; opacity: 0.9; }
+        /* Performance and potential cards in header (right side) */
+        .performance-cards { display: flex; gap: 12px; }
+        .perf-card { background: rgba(255, 255, 255, 0.15); padding: 15px 20px; border-radius: 8px; border-left: 4px solid #d18f9a; min-width: 160px; }
+        .perf-card h3 { font-size: 11px; color: #e6dddd; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        /* Performance values display (year and rating/level pairs) */
+        .perf-values { display: flex; flex-direction: column; gap: 3px; }
+        .perf-row { display: flex; justify-content: space-between; align-items: center; font-size: 10px; }
+        .perf-year { color: #ffffff; font-weight: 500; padding-right: 5px; }
+        .perf-value { color: #ffffff; font-weight: 600; font-size: 11px; }
+        /* Main content area - two-column layout (sidebar + main content) */
+        .content { display: grid; grid-template-columns: 260px 1fr; gap: 0; height: 100%; overflow: hidden; }
+        
+        /* Left sidebar - dark theme for work experience, certifications, mobility */
+        .sidebar { background: #494a4e; color: white; padding: 20px; overflow: hidden; }
+        
+        /* Right main content area - light background for talent summary and goals */
+        .main-content { padding-left: 20px; padding-bottom:10px; padding-top:10px; padding-right:15px; overflow: hidden; background: #fafafa; }
+        /* Section containers with spacing */
+        .section { margin-bottom: 8px; }
+        
+        /* Section titles with underline - red for main content */
+        .section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #314286; color: #314286; }
+        
+        /* Light color for sidebar section titles */
+        .sidebar .section-title { color: #ecf0f1; border-bottom-color: #ecf0f1; }
+        /* Work experience items in sidebar */
+        .work-item { margin-bottom: 14px; font-size: 11px; }
+        .work-item h4 { font-size: 13px; margin-bottom: 3px; color: #ecf0f1; }
+        .work-item .date { color: #bdc3c7; font-size: 10px; margin-bottom: 2px; }
+        .work-item .location { color: #95a5a6; font-size: 10px; margin-bottom: 2px; }
+        .work-item .role { color: #ecf0f1; font-size: 11px; }
+        
+        /* Certification items in sidebar - semi-transparent background */
+        .cert-item { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; margin-bottom: 8px; font-size: 12px; }
+        /* Two-column grid for talent summary (strengths and opportunities) */
+        .talent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+        .talent-column h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #2c3e50; }
+        .talent-column p { font-size: 12px; line-height: 1.6; margin-bottom: 8px; color: #555; text-align: justify; }
+        
+        /* List styling to match paragraph formatting for consistent appearance */
+        .talent-column ul { font-size: 12px; line-height: 1.6; margin-bottom: 8px; color: #555; padding-left: 0; list-style: none; }
+        .talent-column li { margin-bottom: 8px; text-align: justify; }
+        .talent-column li b { font-weight: 600; color: #2c3e50; }
+        
+        /* Career goals section - white card with subtle shadow */
+        .goals-section { background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .goal-item { margin-bottom: 8px; }
+        .goal-item strong { display: block; color: #2c3e50; font-size: 12px; margin-bottom: 4px; }
+        
+        /* Mobility information items in sidebar */
+        .mobility-item { font-size: 11px; margin-bottom: 8px; color: #ecf0f1; }
+        .mobility-item strong { color: #ecf0f1; margin-bottom: 3px; }
+        
+        /* Skill chip tags - bordered pills for skill display */
+        .chip { display:inline-block; padding: 4px 4px; border:1px solid #99999b; border-radius: 5px; margin: 2px 4px 0 0; font-size: 9pt; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {# Header Section: Employee photo, basic info, and performance metrics #}
+        <div class="header">
+            {# Display employee photo from base64 field #}
+            <img id="topAvatar" src="{{ photo_data_url }}" alt="Avatar" class="avatar">
+            
+            {# Employee basic information section #}
+            <div class="header-info">
+                <h1>{{ name }} - {{ entry.Business_Title_Worker }}</h1>
+                <div class="header-details">
+                    {# Column 1: Manager, Grade, Function #}
+                    <div>
+                        <strong>Manager:</strong> {{ entry.manager }}<br>
+                        <strong>Grade:</strong> G<br>
+                        <strong>Function:</strong> Supply Chain
+                    </div>
+                    {# Column 2: Business, Location, Retention Risk #}
+                    <div>
+                        <strong>Business:</strong> Meals & Beverage<br>
+                        <strong>Location:</strong> USA - NC - Charlotte - Plant<br>
+                        <strong>Retention Risk:</strong> Low
+                    </div>
+                    {# Column 3: Time metrics and loss indicator #}
+                    <div>
+                        <strong>Time in Role:</strong> 1 Year(s)<br>
+                        <strong>Years of Service:</strong> 14 Year(s)<br>
+                        <strong>Regrettable Loss:</strong> Yes
+                    </div>
+                </div>
+            </div>
+            
+            {# Performance and potential assessment cards - HARDCODED from v3 #}
+            <div class="performance-cards">
+                {# Performance ratings card #}
+                <div class="perf-card">
+                    <h3>Performance</h3>
+                    <div class="perf-values">
+                        <div class="perf-row">
+                            <span class="perf-year">F25:</span>
+                            <span class="perf-value">Exceeded Expectations</span>
+                        </div>
+                        <div class="perf-row">
+                            <span class="perf-year">F24:</span>
+                            <span class="perf-value">Meet Expectations</span>
+                        </div>
+                        <div class="perf-row">
+                            <span class="perf-year">F23:</span>
+                            <span class="perf-value">Exceeded Expectations</span>
+                        </div>
+                    </div>
+                </div>
+                
+                {# Access Potential ratings card #}
+                <div class="perf-card">
+                    <h3>Access Potential</h3>
+                    <div class="perf-values">
+                        <div class="perf-row">
+                            <span class="perf-year">F25:</span>
+                            <span class="perf-value">High Professional</span>
+                        </div>
+                        <div class="perf-row">
+                            <span class="perf-year">F24:</span>
+                            <span class="perf-value">Emerging Talent</span>
+                        </div>
+                        <div class="perf-row">
+                            <span class="perf-year">F23:</span>
+                            <span class="perf-value">High Professional</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>  {# End header #}
+        
+        {# Main content area with sidebar and main sections #}
+        <div class="content">
+            {# Left Sidebar: Work Experience, Certifications, Mobility - HARDCODED from v3 #}
+            <div class="sidebar">
+                {# Work Experience Section #}
+                <div class="section">
+                    <div class="section-title">Work Experience</div>
+                    <div class="work-item">
+                        <h4>Optum</h4>
+                        <div class="date">June 2017 – Present</div>
+                        <div class="location">Camden – NJ</div>
+                        <div class="role">Senior Manager, Manufacturing</div>
+                    </div>
+                    <div class="work-item">
+                        <h4>Kraft Heinz</h4>
+                        <div class="date">January 2012 – June 2017</div>
+                        <div class="location">Chicago, IL</div>
+                        <div class="role">Operations Manager</div>
+                    </div>
+                    <div class="work-item">
+                        <h4>Mondelez</h4>
+                        <div class="date">September 2008 – January 2012</div>
+                        <div class="location">Boulder, CO</div>
+                        <div class="role">Production Supervisor</div>
+                    </div>
+                </div>
+                
+                {# Certifications Section #}
+                <div class="section">
+                    <div class="section-title">Certifications</div>
+                    <div class="cert-item">Pro Sci Certification</div>
+                </div>
+                
+                {# Mobility Preferences Section #}
+                <div class="section">
+                    <div class="section-title">Mobility</div>
+                    <div class="mobility-item"><strong>Short-Term Relocation:</strong> Y/N</div>
+                    <div class="mobility-item"><strong>Locations Mobile To:</strong> </div>
+                    <div class="mobility-item" style="margin-top: 10px;"><strong>Long-Term Relocation:</strong> Y/N</div>
+                    <div class="mobility-item"><strong>Locations Mobile To:</strong> </div>
+                </div>
+            </div>  {# End sidebar #}
+            
+            {# Right Main Content: Talent Summary, Career Aspirations, Skills, Development Actions #}
+            <div class="main-content">
+                {# Talent Summary Section - Key Strengths and Development Opportunities (DYNAMIC from v4 JSON) #}
+                <div class="section">
+                    <div class="section-title">Talent Summary</div>
+                    <div class="talent-grid">
+                        <div class="talent-column">
+                            <h3>Key Strengths</h3>
+                            {# Split Key_Strengths by newline and create paragraphs #}
+                            {% for strength in entry.Key_Strengths.split('\n') %}
+                                {% if strength.strip() %}
+                                    <p>{{ strength.strip() }}</p>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="talent-column">
+                            <h3>Development Opportunities</h3>
+                            {# Handle both HTML and plain text formats from API #}
+                            {# Apply filters to decode HTML entities and fix empty paragraphs for Power Automate compatibility #}
+                            {% if '<p>' in entry.Development_Areas or '<div>' in entry.Development_Areas or '<ul>' in entry.Development_Areas %}
+                                {{ entry.Development_Areas | decode_entities | fix_empty_paragraphs | safe }}
+                            {% else %}
+                                {% for line in entry.Development_Areas.split('\n') %}
+                                    {% if line.strip() %}
+                                        <p>{{ line.strip() | decode_entities }}</p>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                {# Career Aspirations Section (DYNAMIC from v4 JSON for current and short-term, HARDCODED for long-term) #}
+                <div class="section">
+                    <div class="section-title">Career Aspirations</div>
+                    <div class="goals-section">
+                        <div class="goal-item">
+                            <strong>Career interests:</strong> 
+                            <div style="font-size: 12px; line-height: 1.6; color: #555;">
+                                {{ entry.Career_Interests | decode_entities | fix_empty_paragraphs | safe }}
+                            </div>
+                        </div>
+                        <div class="goal-item">
+                            <strong>Career Preferences:</strong>
+                            <div style="font-size: 12px; line-height: 1.6; color: #555;">
+                                {{ entry.Career_Preferences | decode_entities | fix_empty_paragraphs | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Additional Information Section - Skills and Development Actions (HARDCODED from v3) #}
+                <div class="section">
+                    <div class="section-title">Others</div>
+                    <div class="talent-grid">
+                        <div class="talent-column">
+                            <h3>Skill Sets</h3>
+                            <p>
+                                <span class="chip">Brand & Customer Strategy</span>
+                                <span class="chip">Talent Pipe Lining</span>
+                                <span class="chip">Delivery of HR Services</span>
+                                <span class="chip">Environmental Stewardship and Sustainability</span>
+                                <span class="chip">Plant Manufacturing</span>
+                                <span class="chip">Environmental Stewardship</span>
+                            </p>
+                        </div>
+                        <div class="talent-column">
+                            <h3>Development Plan Actions</h3>
+                            <p>
+                                Leadership Style (In Progress) | 
+                                Executive presence including Hourly engagement (In Progress) | 
+                                Team Building - immediate and furture (In Progress) | 
+                                Collaboration with Peers (In Progress) | 
+                                Board Exposure (In Progress) | 
+                                Executive Coach (In Progress) | 
+                                Visionary Thinking (In Progress)
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>  {# End main-content #}
+        </div>  {# End content #}
+    </div>  {# End container #}
+</body>
+</html>

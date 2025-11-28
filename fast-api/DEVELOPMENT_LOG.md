@@ -45,7 +45,37 @@ C:\python\heroku\                           ← Git repository root (heroku.git)
 ---
 
 ## 📝 Development Session History
+### **Session 5: November 27, 2025 - Tenant Selection, Azure, Repo Migration**
 
+#### **🌐 Tenant Selection via Query String**
+- Refactored `/talent-card/{employee_id}` endpoint to support tenant selection using query string: `?tenant=csc` or `?tenant=gms`.
+- Default tenant is read from `WORKDAY_TENANT` environment variable (falls back to 'gms' if unset).
+- Single endpoint now supports both legacy and explicit tenant selection, e.g.:
+  - `/talent-card/21103` (default tenant)
+  - `/talent-card/21103?tenant=csc` (CSC)
+  - `/talent-card/21103?tenant=gms` (GMS)
+- Refactored config loading and template selection to dynamically use the tenant from query string or env.
+
+#### **🚀 Azure Deployment Improvements**
+- Added instructions and startup command for Azure App Service deployment:
+  - Use `cd fast-api && gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:$PORT` as Startup Command in Azure Portal.
+- Ensured proper working directory and port binding for Azure compatibility.
+- Reminder to set required environment variables in Azure: `WORKDAY_TENANT`, `WORKDAY_USERNAME`, `WORKDAY_PASSWORD`, `SCM_DO_BUILD_DURING_DEPLOYMENT`.
+
+#### **🔄 Repository Migration Steps**
+- Migrated project from original Heroku repo to new GitHub repo `talent-card-main`.
+- Verified and updated git remote URL to new repo.
+- Provided steps for adding, committing, and pushing code to new repository.
+- Confirmed all git operations should be run from project root.
+
+#### **🛠️ Other Enhancements**
+- Updated API documentation and root endpoint to show new tenant selection usage.
+- Cleaned up code and comments for clarity and maintainability.
+
+**Impact:**
+- Flexible tenant selection for Power Automate and API consumers.
+- Easier Azure deployment and troubleshooting.
+- Clean migration to new repository for future development.
 ### **Session 4: October 17, 2025 - Layout Fix & Repository Cleanup**
 
 #### **🎨 HTML/CSS Layout Margin Fix**

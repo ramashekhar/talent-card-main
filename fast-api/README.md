@@ -18,12 +18,131 @@ A professional FastAPI application that integrates with Workday HR systems to ge
 - **Health Monitoring**: Built-in health check and system monitoring endpoints
 
 ## 🚀 **Quick Start**
+---
 
+## 📁 Folder Structure
+
+```
+talent-card-main/
+├── Procfile                  # Heroku process configuration
+├── requirements.txt          # Python dependencies
+├── runtime.txt               # Python version specification
+├── README.md                 # Project documentation
+└── fast-api/
+    ├── main.py               # FastAPI app entry point
+    ├── routers/
+    │   ├── talent_cards.py   # Workday API integration & talent card generation
+    │   ├── employee.py       # Local employee testing
+    │   └── health.py         # Health monitoring endpoints
+    ├── src/
+    │   └── workday_client.py # Workday REST API client
+    ├── config/
+    │   ├── workday_config_production-gms.json # Production config (GMS)
+    │   ├── workday_config_production-csc.json # Production config (CSC)
+    │   ├── workday_config-gms.json            # Local config (GMS)
+    │   ├── workday_config-csc.json            # Local config (CSC)
+    │   └── workday_config.example.json        # Example config
+    ├── templates/
+    │   ├── talent-card-gms.html.jinja        # GMS talent card template
+    │   ├── talent-card-csc.html.jinja        # CSC talent card template
+    │   └── employee_not_found.html.jinja     # Not found template
+    ├── static/
+    │   └── style.css                        # CSS and static assets
+    ├── output/                              # Local HTML output (gitignored)
+    └── DEVELOPMENT_LOG.md                   # Development log
+```
+
+## 🆕 November 27, 2025: Major Enhancements
+
+### Tenant Selection via Query String
+- You can now select tenant ("csc" or "gms") using a query string:
+  - `/talent-card/21103?tenant=gms` (GMS)
+  - `/talent-card/1000130722?tenant=csc` (CSC)
+- If not provided, defaults to `WORKDAY_TENANT` environment variable (or "gms").
+- Config and template loading are now dynamic per request.
+
+### Repository Migration
+- Project migrated from Heroku repo to new GitHub repo `talent-card-main`.
+- All git operations should be run from the project root.
+
+### Azure Deployment Support
+- Added instructions for Azure App Service deployment (see below).
+
+---
 ### **Prerequisites**
 - Python 3.11.6
 - Workday HR system access with custom report permissions
 - Git and terminal access
+---
 
+## 🚀 Deployment Guide
+
+### Local Development
+
+
+1. Clone the repo:
+  ```powershell
+  git clone https://github.com/ramashekhar/talent-card-main.git
+  cd talent-card-main
+  pip install -r requirements.txt
+  ```
+2. Change directory to the FastAPI app folder:
+  ```powershell
+  cd fast-api
+  ```
+3. Create and edit your config files for both tenants:
+  ```powershell
+  copy config\workday_config.example.json config\workday_config-gms.json
+  copy config\workday_config.example.json config\workday_config-csc.json
+  # Edit config\workday_config-gms.json and config\workday_config-csc.json with your credentials and endpoints
+  ```
+4. Run the server (from inside fast-api):
+  ```powershell
+  python main.py
+  # or
+  uvicorn main:app --port 8001
+  ```
+5. Access endpoints:
+  - http://localhost:8001/talent-card/21103?tenant=gms
+  - http://localhost:8001/talent-card/1000130722?tenant=csc
+  - http://localhost:8001/docs
+
+### Heroku Deployment
+1. Set config variables in Heroku:
+  ```bash
+  heroku config:set WORKDAY_USERNAME=your_username@your_tenant
+  heroku config:set WORKDAY_PASSWORD=your_password
+  heroku config:set WORKDAY_TENANT=gms # or csc
+  ```
+2. Deploy to Heroku using one of these methods:
+  - **Recommended:** Use Heroku GitHub integration (connect your repo in the Heroku dashboard and enable automatic deploys).
+  - Or use the Heroku CLI to trigger a manual deployment:
+    ```bash
+    heroku git:remote -a your-app-name
+    git push heroku main  # Only if you want to use Heroku's git remote
+    ```
+3. Heroku will use root-level Procfile and requirements.txt. No changes needed for subfolder structure.
+4. Endpoints:
+  - https://your-app.herokuapp.com/talent-card/21103?tenant=gms
+  - https://your-app.herokuapp.com/talent-card/1000130722?tenant=csc
+
+### Azure App Service Deployment
+1. Set up your App Service for Python 3.11+.
+2. In Azure Portal, go to Configuration > General settings > Startup Command and set:
+  ```bash
+  cd fast-api && gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:$PORT
+  ```
+3. Set environment variables in Azure:
+  - WORKDAY_USERNAME
+  - WORKDAY_PASSWORD
+  - WORKDAY_TENANT (gms or csc)
+  - SCM_DO_BUILD_DURING_DEPLOYMENT=true
+4. Endpoints:
+  - https://your-app.azurewebsites.net/talent-card/21103?tenant=gms
+  - https://your-app.azurewebsites.net/talent-card/1000130722?tenant=csc
+  - https://your-app.azurewebsites.net/docs
+
+---
 ### **1. Local Development Setup**
 
 #### **Configuration (Development)**
@@ -70,7 +189,7 @@ cd fast-api  # Back to project directory
 python -c "import uvicorn; from main import app; uvicorn.run(app, host='0.0.0.0', port=8001)"
 
 # Option 2: Background server
-uvicorn main:app --reload --host 0.0.0.0 --port 8001
+uvicorn main:app --port 8001
 ```
 
 #### **Access Application**
@@ -202,72 +321,7 @@ The application automatically detects Heroku environment (`DYNO` environment var
 - 🚫 **No persistent storage** of personal data on production servers
 - � **Local file generation** only in development mode
 
-## 🤖 **Power Automate Integration**
-
-### **Workflow Setup**
-
-#### **Step 1: HTTP Request Action**
-```
-Action: HTTP
-Method: GET
-URI: https://your-heroku-app.herokuapp.com/talent-card/{employee_id}
-Headers: 
-  Accept: text/html
-```
-
-#### **Step 2: Create HTML File**  
-```
-Action: OneDrive - Create file
-File name: talent-card-{employee_id}.html
-File content: {body from HTTP action}
-```
-
-#### **Step 3: Convert to PDF**
-```
-Action: OneDrive - Convert file
-Source file: talent-card-{employee_id}.html
-Output format: PDF
-```
-
-### **Integration Benefits**
-- **🚀 High Performance**: FastAPI async processing
-- **🔄 Live Data**: Always current employee information from Workday
-- **📱 Professional Output**: A4 landscape cards optimized for printing
-- **🛡️ Secure**: No data persistence, processing in memory
-- **📊 Reliable**: Health monitoring and error handling
-
-### **Example Power Automate Flow**
-```json
-{
-  "trigger": "Manual trigger with employee ID input",
-  "actions": [
-    {
-      "name": "Get Talent Card HTML",
-      "type": "HTTP",
-      "inputs": {
-        "method": "GET", 
-        "uri": "https://your-app.herokuapp.com/talent-card/@{triggerBody()['employee_id']}"
-      }
-    },
-    {
-      "name": "Create HTML File",
-      "type": "OneDrive - Create file",
-      "inputs": {
-        "fileName": "talent-card-@{triggerBody()['employee_id']}.html",
-        "content": "@{body('Get_Talent_Card_HTML')}"
-      }
-    },
-    {
-      "name": "Convert to PDF", 
-      "type": "OneDrive - Convert file",
-      "inputs": {
-        "sourceFile": "@{outputs('Create_HTML_File')['body']['id']}",
-        "format": "PDF"
-      }
-    }
-  ]
-}
-```## 🏗️ **Architecture & File Structure**
+## 🏗️ **Architecture & File Structure**
 
 ### **Modular Application Architecture**
 ```
@@ -322,46 +376,6 @@ fast-api/
 - **`Procfile`**: Heroku process configuration (`cd fast-api && gunicorn main:app...`)
 - **`requirements.txt`**: Python dependencies (Heroku uses root-level)
 - **`runtime.txt`**: Python version specification (`python-3.11.6`)
-
----
-
-## � **Power Automate Integration**
-
-### **HTML-to-PDF Compatibility**
-
-This application is specifically optimized for **Microsoft Power Automate HTML-to-PDF conversion** workflows. The following compatibility features ensure reliable PDF generation:
-
-#### **Template Optimizations**
-- **Empty Paragraph Handling**: Automatically converts `<p></p>` to `<p>&nbsp;</p>` to prevent sandbox exceptions
-- **Consistent Font Sizing**: CSS rules ensure uniform 12px font across all content types (`<p>`, `<ul>`, `<li>`)
-- **Mixed Format Support**: Handles rich text data from Workday (HTML lists, paragraphs, plain text)
-- **HTML Entity Decoding**: Processes special characters (`&#39;` → `'`) for clean PDF output
-
-#### **Power Automate Workflow Steps**
-1. **HTTP Request**: Call `/talent-card/{employee_id}` endpoint
-2. **Get Response**: Receive clean HTML optimized for PDF conversion
-3. **OneDrive Action**: Use "Convert HTML to PDF" with the response body
-4. **Result**: Professional A4 landscape PDF talent card
-
-#### **Known Compatibility Issues Resolved**
-- ✅ **Empty `<p></p>` tags**: Replaced with `<p>&nbsp;</p>` for proper spacing
-- ✅ **Font size inconsistencies**: Added CSS for `<ul><li>` elements to match paragraph styling  
-- ✅ **HTML entity encoding**: Automatic decoding prevents conversion errors
-- ✅ **Mixed content formats**: Unified handling of HTML and plain text from Workday
-
-#### **Testing Power Automate Integration**
-```http
-# Test with known working employee
-GET /talent-card/{employee_id}
-
-# Test with previously problematic employee (now fixed)  
-GET /talent-card/{employee_id}
-```
-
-#### **Troubleshooting Power Automate Issues**
-- **Sandbox Exception**: Check for empty paragraph tags (now auto-fixed)
-- **Font Size Problems**: Verify CSS loads properly in Power Automate preview
-- **Encoding Issues**: HTML entities are automatically decoded by template filters
 
 ---
 

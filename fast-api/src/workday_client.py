@@ -47,13 +47,12 @@ class WorkdayClient:
         Args:
             config (dict): Configuration dictionary containing:
                 - endpoint: Workday API endpoint URL (SOAP for photos)
-                - profile_endpoint: REST API endpoint URL (for profile data)
+                - endpoint: REST API endpoint URL (for profile data)
                 - username: Authentication username
                 - password: Authentication password
                 - version: API version (e.g., "v44.1")
         """
         self.endpoint = config['endpoint']
-        self.profile_endpoint = config.get('profile_endpoint')
         self.username = config['username']
         self.password = config['password']
         self.version = config['version']
@@ -169,35 +168,6 @@ class WorkdayClient:
         except ET.ParseError as e:
             raise Exception(f"Failed to parse XML response: {str(e)}")
     
-    def get_person_photo(self, employee_id: str) -> Optional[str]:
-        """
-        Fetch person photo from Workday API.
-        
-        High-level method that orchestrates the complete workflow:
-        1. Build SOAP request
-        2. Call Workday API
-        3. Parse response and extract Base64 photo
-        
-        Args:
-            employee_id (str): Employee ID to fetch photo for
-            
-        Returns:
-            str: Base64-encoded photo data, or None if not found
-            
-        Raises:
-            Exception: If any step in the workflow fails
-        """
-        # Build SOAP request
-        soap_request = self.build_soap_request(employee_id)
-        
-        # Call API
-        xml_response = self.call_api(soap_request)
-        
-        # Parse response and extract Base64
-        base64_data = self.parse_response(xml_response)
-        
-        return base64_data
-    
     def get_employee_profile(self, employee_id: str) -> Dict:
         """
         Fetch complete employee profile from Workday REST API.
@@ -217,11 +187,11 @@ class WorkdayClient:
         Raises:
             Exception: If API request fails, authentication fails, or response is invalid
         """
-        if not self.profile_endpoint:
-            raise Exception("Profile endpoint not configured in workday_config.json")
+        if not self.endpoint:
+            raise Exception("Endpoint not configured in workday_config.json")
         
         # Build URL with query parameters
-        url = f"{self.profile_endpoint}?format=JSON&Employee_ID={employee_id}"
+        url = f"{self.endpoint}?format=JSON&Employee_ID={employee_id}"
         
         # Extract username without @tenant suffix for REST API
         # REST API uses just the numeric ID, not the full SOAP username

@@ -19,25 +19,44 @@ from src.workday_client import WorkdayClient
 
 router = APIRouter()
 
+# Get default tenant from environment variable (either 'csc' or 'gms'), default to 'gms'
+DEFAULT_TENANT = os.getenv('WORKDAY_TENANT', 'gms').lower()
+
 # Workday client setup
-def load_workday_config() -> Dict:
+def load_workday_config(tenant: str = None) -> Dict:
     """
     Load Workday API configuration with hybrid approach:
     - Sensitive credentials (username/password) from environment variables
     - Non-sensitive config (endpoints, version) from config file
-    """
     
-    # Always load base config from file (use production config for Heroku, local for dev)
-    if os.getenv('DYNO'):  # Running on Heroku
-        config_file = Path("config/workday_config_production.json")
+    Args:
+        tenant: Tenant identifier ('csc' or 'gms'). If None, uses DEFAULT_TENANT.
+    """
+    # Use provided tenant or fall back to default
+    tenant = (tenant or DEFAULT_TENANT).lower()
+    
+    # Validate tenant
+    if tenant not in ['csc', 'gms']:
+        raise ValueError(f"Invalid tenant '{tenant}'. Must be 'csc' or 'gms'")
+    
+    # --- Deployment Environment Detection ---
+    # Heroku sets DYNO, Azure sets WEBSITE_INSTANCE_ID
+    # If either is present, we treat as production.
+    is_heroku = os.getenv('DYNO') is not None  # True if running on Heroku
+    is_azure = os.getenv('WEBSITE_INSTANCE_ID') is not None  # True if running on Azure
+    is_production = is_heroku or is_azure  # Production if either is true
+
+    if is_production:  # Running on Heroku or Azure
+        config_file = Path(f"config/workday_config_production-{tenant}.json")
     else:  # Running locally
-        config_file = Path("config/workday_config.json")
+        config_file = Path(f"config/workday_config-{tenant}.json")
         
     if not config_file.exists():
         raise FileNotFoundError(
             f"Configuration file not found: {config_file}\n"
-            f"For Heroku: Use workday_config_production.json (safe for GitHub)\n"
-            f"For local: Create workday_config.json with your credentials"
+            f"Tenant: {tenant} (from query string or WORKDAY_TENANT env variable)\n"
+            f"For production: Use workday_config_production-{tenant}.json\n"
+            f"For local: Create workday_config-{tenant}.json with your credentials"
         )
     
     with open(config_file, 'r', encoding='utf-8') as f:
@@ -47,12 +66,12 @@ def load_workday_config() -> Dict:
     if 'WORKDAY_USERNAME' in os.environ and 'WORKDAY_PASSWORD' in os.environ:
         config['username'] = os.environ['WORKDAY_USERNAME']
         config['password'] = os.environ['WORKDAY_PASSWORD']
-        print("✓ Using credentials from environment variables (Heroku)")
+        print("✓ Using credentials from environment variables (Heroku/Azure)")
     else:
         print("✓ Using credentials from config file (local development)")
     
     # Validate required fields
-    required_fields = ['endpoint', 'profile_endpoint', 'username', 'password', 'version']
+    required_fields = ['endpoint', 'username', 'password', 'version']
     missing_fields = [field for field in required_fields if field not in config or not config[field]]
     
     if missing_fields:
@@ -64,38 +83,57 @@ def load_workday_config() -> Dict:
     
     return config
 
-# Initialize Workday client
-try:
-    workday_config = load_workday_config()
-    workday_client = WorkdayClient(workday_config)
-except Exception as e:
-    print(f"Warning: Could not initialize Workday client: {e}")
-    workday_client = None
+def get_workday_client(tenant: str = None) -> WorkdayClient:
+    """
+    Get or create a Workday client for the specified tenant.
+    
+    Args:
+        tenant: Tenant identifier ('csc' or 'gms'). If None, uses DEFAULT_TENANT.
+    
+    Returns:
+        WorkdayClient instance configured for the tenant
+    """
+    config = load_workday_config(tenant)
+    return WorkdayClient(config)
 
 def is_local_environment() -> bool:
-    """Check if running locally (not Heroku)"""
-    return os.getenv('DYNO') is None
+    """Check if running locally (not Heroku or Azure)"""
+    return os.getenv('DYNO') is None and os.getenv('WEBSITE_INSTANCE_ID') is None
 
 @router.get("/talent-card/{employee_id}", response_class=HTMLResponse)
-async def get_talent_card(request: Request, employee_id: str):
+async def get_talent_card(request: Request, employee_id: str, tenant: str = None):
     """
     Talent Card page - fetches data from Workday API and renders talent card HTML
     
     This endpoint:
     1. Fetches fresh employee data from Workday REST API
-    2. Renders the talent-card.html.jinja template 
+    2. Renders the tenant-specific talent-card template
     3. Returns HTML response for Power Automate integration
     4. Optionally saves HTML file locally for development
+    
+    Args:
+        employee_id: Employee ID to generate card for
+        tenant: Optional tenant query parameter ('csc' or 'gms'). 
+                Defaults to WORKDAY_TENANT env variable or 'gms'.
+    
+    Example URLs:
+        - /talent-card/21103 (uses default tenant from env)
+        - /talent-card/21103?tenant=gms
+        - /talent-card/1000130722?tenant=csc
     """
-    if not workday_client:
-        raise HTTPException(
-            status_code=500, 
-            detail="Workday client not configured. Please check config/workday_config.json"
-        )
+    # Use provided tenant or fall back to default
+    tenant = (tenant or DEFAULT_TENANT).lower()
     
     try:
+        # Validate tenant
+        if tenant not in ['csc', 'gms']:
+            raise ValueError(f"Invalid tenant '{tenant}'. Must be 'csc' or 'gms'")
+        
+        # Get Workday client for the specified tenant
+        workday_client = get_workday_client(tenant)
+        
         # Fetch employee profile data from Workday API
-        print(f"Fetching talent card data for employee {employee_id}...")
+        print(f"[{tenant.upper()}] Fetching talent card data for employee {employee_id}...")
         profile_data = workday_client.get_employee_profile(employee_id)
         
         # Render talent card template to string
@@ -116,7 +154,7 @@ async def get_talent_card(request: Request, employee_id: str):
         
         env.filters['decode_entities'] = decode_html_entities
         env.filters['fix_empty_paragraphs'] = fix_empty_paragraphs
-        template = env.get_template("talent-card.html.jinja")
+        template = env.get_template(f"talent-card-{tenant}.html.jinja")
         
         # Render template with profile data
         html_string = template.render(**profile_data)
@@ -125,7 +163,7 @@ async def get_talent_card(request: Request, employee_id: str):
         if is_local_environment():
             output_dir = Path("output")
             output_dir.mkdir(exist_ok=True)
-            output_file = output_dir / f"talent-card-{employee_id}.html"
+            output_file = output_dir / f"talent-card-{tenant}-{employee_id}.html"
             
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(html_string)
@@ -137,13 +175,20 @@ async def get_talent_card(request: Request, employee_id: str):
         worker_field = entry.get('Worker', '')
         employee_name = worker_field.split('(')[0].strip() if worker_field else f"employee {employee_id}"
         
-        print(f"✓ Talent card generated for {employee_name}")
+        print(f"✓ [{tenant.upper()}] Talent card generated for {employee_name}")
         
         # Return HTML response
         return HTMLResponse(content=html_string)
-        
+    
+    except ValueError as e:
+        # Invalid tenant error
+        print(f"Invalid tenant '{tenant}': {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
     except Exception as e:
-        print(f"Error generating talent card for employee {employee_id}: {str(e)}")
+        print(f"[{tenant.upper()}] Error generating talent card for employee {employee_id}: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate talent card: {str(e)}"
